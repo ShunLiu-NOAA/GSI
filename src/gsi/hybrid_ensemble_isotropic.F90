@@ -2593,8 +2593,8 @@ subroutine sqrt_beta_s_mult_cvec(grady)
      call stop2(999)
   endif
 
-!$omp parallel do schedule(dynamic,1) private(ic3,ic2,k,j,i,ii)
   ! multiply by sqrt_beta_s
+!$omp parallel do schedule(dynamic,1) private(ic3,ic2,k,j,i,ii)
   do j=1,lon2
      do ii=1,nsubwin
         do ic3=1,nc3d
@@ -2691,8 +2691,8 @@ subroutine sqrt_beta_s_mult_bundle(grady)
      call stop2(999)
   endif
 
-!$omp parallel do schedule(dynamic,1) private(ic3,ic2,k,j,i)
   ! multiply by sqrt_beta_s
+!$omp parallel do schedule(dynamic,1) private(ic3,ic2,k,j,i)
   do j=1,lon2
      do ic3=1,nc3d
         ! check for ozone and skip if oz_univ_static = true
@@ -2770,8 +2770,8 @@ subroutine sqrt_beta_e_mult_cvec(grady)
   ! Initialize timer
   call timer_ini('sqrt_beta_e_mult')
 
-!$omp parallel do schedule(dynamic,1) private(nn,k,j,i,ii)
   ! multiply by sqrt_beta_e
+!$omp parallel do schedule(dynamic,1) private(nn,k,j,i,ii)
   do j=1,grd_ens%lon2
      do ii=1,nsubwin
         do nn=1,n_ens
@@ -2834,8 +2834,8 @@ subroutine sqrt_beta_e_mult_bundle(aens)
   ! Initialize timer
   call timer_ini('sqrt_beta_e_mult')
 
-!$omp parallel do schedule(dynamic,1) private(nn,k,j,i)
   ! multiply by sqrt_beta_e
+!$omp parallel do schedule(dynamic,1) private(nn,k,j,i)
   do j=1,grd_ens%lon2
      do nn=1,n_ens
         do k=1,nsig
@@ -3430,7 +3430,7 @@ subroutine get_new_alpha_beta(aspect,ng,fmat_out,fmat0_out)
 
 end subroutine get_new_alpha_beta
 
-subroutine bkerror_a_en(gradx,grady)
+subroutine bkerror_a_en(grady)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    bkerror_a_en  copy of bkerror for hybrid ensemble          
@@ -3444,10 +3444,10 @@ subroutine bkerror_a_en(gradx,grady)
 !   2010-05-20  todling  update to use bundle
 !
 !   input argument list:
-!     gradx    - input field  
+!     grady    - input field  
 !
 !   output
-!     grady    - background structure * gradx 
+!     grady    - background structure * grady 
 !
 ! attributes:
 !   language: f90
@@ -3463,11 +3463,10 @@ subroutine bkerror_a_en(gradx,grady)
   implicit none
 
 ! Declare passed variables
-  type(control_vector),intent(inout) :: gradx
   type(control_vector),intent(inout) :: grady
 
 ! Declare local variables
-  integer(i_kind) ii,nn,ip,istatus
+  integer(i_kind) ii,ip,istatus
 
   if (lsqrtb) then
      write(6,*)'bkerror_a_en: not for use with lsqrtb'
@@ -3483,12 +3482,6 @@ subroutine bkerror_a_en(gradx,grady)
      write(6,*)'bkerror_a_en: trouble getting pointer to ensemble CV'
      call stop2(317)
   endif
-!$omp parallel do schedule(dynamic,1) private(nn,ii)
-  do nn=1,n_ens
-     do ii=1,nsubwin
-        grady%aens(ii,nn)%r3(ip)%q=gradx%aens(ii,nn)%r3(ip)%q
-     enddo
-  enddo
 
 !  multiply by sqrt_beta_e_mult
   call sqrt_beta_e_mult(grady)
@@ -4008,7 +4001,7 @@ subroutine hybens_localization_setup
    use gfs_stratosphere, only: use_gfs_stratosphere,blend_rm
    use hybrid_ensemble_parameters, only: grd_ens,jcap_ens,n_ens,grd_loc,sp_loc,&
                                          nval_lenz_en,regional_ensemble_option
-   use hybrid_ensemble_parameters, only: readin_beta,beta_s,beta_e,beta_s0,sqrt_beta_s,sqrt_beta_e
+   use hybrid_ensemble_parameters, only: readin_beta,beta_s,beta_e,beta_s0,beta_e0,sqrt_beta_s,sqrt_beta_e
    use hybrid_ensemble_parameters, only: readin_localization,create_hybens_localization_parameters, &
                                          vvlocal,s_ens_h,s_ens_hv,s_ens_v,s_ens_vv
    use gsi_io, only: verbose
@@ -4074,7 +4067,11 @@ subroutine hybens_localization_setup
 
    if ( .not. readin_beta ) then ! assign all levels to same value, sum = 1.0
       beta_s = beta_s0
-      beta_e = one - beta_s0
+      if (beta_e0 < 0) then
+         beta_e = one - beta_s0
+      else
+         beta_e = beta_e0
+      endif
    endif
 
    if ( regional_ensemble_option == 2 .and. use_gfs_stratosphere .and. .not. readin_beta ) then
@@ -4178,7 +4175,7 @@ subroutine convert_km_to_grid_units(s_ens_h_gu_x,s_ens_h_gu_y,nz)
   implicit none
 
   integer(i_kind) ,intent(in   ) ::nz
-  real(r_kind),intent(  out) ::s_ens_h_gu_x(nz),s_ens_h_gu_y(nz)
+  real(r_kind),intent(  out) ::s_ens_h_gu_x(nz*n_ens),s_ens_h_gu_y(nz*n_ens)
   logical :: print_verbose
   real(r_kind) dxmax,dymax
   integer(i_kind) k,n,nk

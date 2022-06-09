@@ -25,14 +25,19 @@ program getsfcensmeanp
   use nemsio_module, only:  nemsio_init,nemsio_open,nemsio_close
   use nemsio_module, only:  nemsio_gfile,nemsio_getfilehead,nemsio_readrec,&
        nemsio_writerec,nemsio_readrecv,nemsio_writerecv
-  use module_fv3gfs_ncio, only: open_dataset, create_dataset, read_attribute, &
-                           Dataset, Dimension, close_dataset, &
-                           read_vardata, write_attribute, write_vardata, &
-                           get_dim
+  use module_ncio, only: open_dataset, create_dataset, read_attribute, &
+                         Dataset, Dimension, close_dataset, &
+                         read_vardata, write_attribute, write_vardata, &
+                         get_dim
 
   implicit none
 
   real(4),parameter:: zero=0.0_4
+
+! Declare externals
+  external :: mpi_init, MPI_Comm_rank, MPI_Comm_size, w3tagb,&
+     MPI_Abort, mpi_comm_group, mpi_group_incl, mpi_comm_create,&
+     mpi_allreduce, mpi_barrier, w3tage, mpi_finalize
 
   logical:: nemsio, sfcio, ncio
 

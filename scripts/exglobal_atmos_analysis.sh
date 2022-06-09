@@ -1,4 +1,4 @@
-#!/bin/ksh
+#!/bin/bash
 ################################################################################
 ####  UNIX Script Documentation Block
 #                      .                                             .
@@ -47,7 +47,6 @@ export NLN=${NLN:-"/bin/ln -sf"}
 export CHGRP_CMD=${CHGRP_CMD:-"chgrp ${group_name:-rstprod}"}
 export NEMSIOGET=${NEMSIOGET:-${NWPROD}/exec/nemsio_get}
 export NCLEN=${NCLEN:-$HOMEgfs/ush/getncdimlen}
-export ERRSCRIPT=${ERRSCRIPT:-'eval [[ $err = 0 ]]'}
 COMPRESS=${COMPRESS:-gzip}
 UNCOMPRESS=${UNCOMPRESS:-gunzip}
 APRUNCFP=${APRUNCFP:-""}
@@ -81,6 +80,10 @@ ntiles=${ntiles:-6}
 export imp_physics=${imp_physics:-99}
 lupp=${lupp:-".true."}
 cnvw_option=${cnvw_option:-".false."}
+
+# Observation usage options
+cao_check=${cao_check:-".false."}
+ta2tb=${ta2tb:-".false."}
 
 # Diagnostic files options
 lobsdiag_forenkf=${lobsdiag_forenkf:-".false."}
@@ -151,6 +154,7 @@ GMI1CRBF=${GMI1CRBF:-${COMIN_OBS}/${OPREFIX}gmi1cr.tm00.bufr_d${OSUFFIX}}
 SAPHIRBF=${SAPHIRBF:-${COMIN_OBS}/${OPREFIX}saphir.tm00.bufr_d${OSUFFIX}}
 SEVIRIBF=${SEVIRIBF:-${COMIN_OBS}/${OPREFIX}sevcsr.tm00.bufr_d${OSUFFIX}}
 AHIBF=${AHIBF:-${COMIN_OBS}/${OPREFIX}ahicsr.tm00.bufr_d${OSUFFIX}}
+SSTVIIRS=${SSTVIIRS:-${COMIN_OBS}/${OPREFIX}sstvcw.tm00.bufr_d${OSUFFIX}}
 ABIBF=${ABIBF:-${COMIN_OBS}/${OPREFIX}gsrcsr.tm00.bufr_d${OSUFFIX}}
 CRISBF=${CRISBF:-${COMIN_OBS}/${OPREFIX}cris.tm00.bufr_d${OSUFFIX}}
 ESCRIS=${ESCRIS:-${COMIN_OBS}/${OPREFIX}escris.tm00.bufr_d${OSUFFIX}}
@@ -166,10 +170,10 @@ SSMISBF=${SSMISBF:-${COMIN_OBS}/${OPREFIX}ssmisu.tm00.bufr_d${OSUFFIX}}
 SBUVBF=${SBUVBF:-${COMIN_OBS}/${OPREFIX}osbuv8.tm00.bufr_d${OSUFFIX}}
 OMPSNPBF=${OMPSNPBF:-${COMIN_OBS}/${OPREFIX}ompsn8.tm00.bufr_d${OSUFFIX}}
 OMPSTCBF=${OMPSTCBF:-${COMIN_OBS}/${OPREFIX}ompst8.tm00.bufr_d${OSUFFIX}}
+OMPSLPBF=${OMPSLPBF:-${COMIN_OBS}/${OPREFIX}ompslp.tm00.bufr_d${OSUFFIX}}
 GOMEBF=${GOMEBF:-${COMIN_OBS}/${OPREFIX}gome.tm00.bufr_d${OSUFFIX}}
 OMIBF=${OMIBF:-${COMIN_OBS}/${OPREFIX}omi.tm00.bufr_d${OSUFFIX}}
 MLSBF=${MLSBF:-${COMIN_OBS}/${OPREFIX}mls.tm00.bufr_d${OSUFFIX}}
-OMPSLPBF=${OMPSLPBF:-${COMIN_OBS}/${OPREFIX}ompslp.tm00.bufr_d${OSUFFIX}}
 SMIPCP=${SMIPCP:-${COMIN_OBS}/${OPREFIX}spssmi.tm00.bufr_d${OSUFFIX}}
 TMIPCP=${TMIPCP:-${COMIN_OBS}/${OPREFIX}sptrmm.tm00.bufr_d${OSUFFIX}}
 GPSROBF=${GPSROBF:-${COMIN_OBS}/${OPREFIX}gpsro.tm00.bufr_d${OSUFFIX}}
@@ -458,9 +462,10 @@ fi
 # CRTM Spectral and Transmittance coefficients
 mkdir -p crtm_coeffs
 for file in $(awk '{if($1!~"!"){print $1}}' satinfo | sort | uniq); do
-   $NLN $RTMFIX/${file}.SpcCoeff.bin ./crtm_coeffs/
-   $NLN $RTMFIX/${file}.TauCoeff.bin ./crtm_coeffs/
+   $NLN $RTMFIX/${file}.SpcCoeff.bin ./crtm_coeffs/${file}.SpcCoeff.bin
+   $NLN $RTMFIX/${file}.TauCoeff.bin ./crtm_coeffs/${file}.TauCoeff.bin
 done
+$NLN $RTMFIX/amsua_metop-a_v2.SpcCoeff.bin ./crtm_coeffs/amsua_metop-a_v2.SpcCoeff.bin
 
 $NLN $RTMFIX/Nalli.IRwater.EmisCoeff.bin   ./crtm_coeffs/Nalli.IRwater.EmisCoeff.bin
 $NLN $RTMFIX/NPOESS.IRice.EmisCoeff.bin    ./crtm_coeffs/NPOESS.IRice.EmisCoeff.bin
@@ -473,6 +478,8 @@ $NLN $RTMFIX/NPOESS.VISwater.EmisCoeff.bin ./crtm_coeffs/NPOESS.VISwater.EmisCoe
 $NLN $RTMFIX/FASTEM6.MWwater.EmisCoeff.bin ./crtm_coeffs/FASTEM6.MWwater.EmisCoeff.bin
 $NLN $RTMFIX/AerosolCoeff.bin              ./crtm_coeffs/AerosolCoeff.bin
 $NLN $RTMFIX/CloudCoeff.bin                ./crtm_coeffs/CloudCoeff.bin
+#$NLN $RTMFIX/CloudCoeff.GFDLFV3.-109z-1.bin ./crtm_coeffs/CloudCoeff.bin
+
 
 ##############################################################
 # Observational data
@@ -500,6 +507,7 @@ $NLN $AMUBDB           amsubbufr_db
 #$NLN $MHSDB            mhsbufr_db
 $NLN $SBUVBF           sbuvbufr
 $NLN $OMPSNPBF         ompsnpbufr
+$NLN $OMPSLPBF         ompslpbufr
 $NLN $OMPSTCBF         ompstcbufr
 $NLN $GOMEBF           gomebufr
 $NLN $OMIBF            omibufr
@@ -533,6 +541,7 @@ $NLN $B1AVHPM          avhpmbufr
 $NLN $AHIBF            ahibufr
 $NLN $ABIBF            abibufr
 $NLN $HDOB             hdobbufr
+$NLN $SSTVIIRS         sstviirs
 
 [[ $DONST = "YES" ]] && $NLN $NSSTBF nsstbufr
 
@@ -618,14 +627,13 @@ if [ $GENDIAG = "YES" ] ; then
 	  rm -rf $DIAG_DIR
       fi
       npe_m1="$(($npe_gsi-1))"
-      for pe in {0..$npe_m1}; do
+      for pe in $(seq 0 $npe_m1); do
         pedir="dir."$(printf %04i $pe)
         mkdir -p $DIAG_DIR/$pedir
         $NLN $DIAG_DIR/$pedir $pedir
       done
    else
-      echo "FATAL ERROR: lrun_subdirs must be true. lrun_subdirs=$lrun_subdirs"
-      $ERRSCRIPT || exit 2
+      err_exit "FATAL ERROR: lrun_subdirs must be true. lrun_subdirs=$lrun_subdirs"
    fi
 fi
 
@@ -716,9 +724,7 @@ EOFunzip
          ncmd_max=$((ncmd < npe_node_max ? ncmd : npe_node_max))
          APRUNCFP_UNZIP=$(eval echo $APRUNCFP)
          $APRUNCFP_UNZIP $DATA/mp_unzip.sh
-	 export ERR=$?
-         export err=$ERR
-         $ERRSCRIPT || exit 3
+         export err=$?; err_chk
       fi
    fi
 fi # if [ $USE_RADSTAT = "YES" ]
@@ -753,18 +759,19 @@ cat > gsiparm.anl << EOF
   iguess=-1,
   tzr_qc=$TZR_QC,
   oneobtest=.false.,retrieval=.false.,l_foto=.false.,
-  use_pbl=.false.,use_compress=.true.,nsig_ext=12,gpstop=50.,
+  use_pbl=.false.,use_compress=.true.,nsig_ext=12,gpstop=50.,commgpstop=45.,commgpserrinf=1.0,
   use_gfs_nemsio=${use_gfs_nemsio},use_gfs_ncio=${use_gfs_ncio},sfcnst_comb=.true.,
   use_readin_anl_sfcmask=${USE_READIN_ANL_SFCMASK},
   lrun_subdirs=$lrun_subdirs,
   crtm_coeffs_path='./crtm_coeffs/',
   newpc4pred=.true.,adp_anglebc=.true.,angord=4,passive_bc=.true.,use_edges=.false.,
   diag_precon=.true.,step_start=1.e-3,emiss_bc=.true.,nhr_obsbin=${nhr_obsbin:-3},
-  cwoption=3,imp_physics=$imp_physics,lupp=$lupp,cnvw_option=$cnvw_option,
+  cwoption=3,imp_physics=$imp_physics,lupp=$lupp,cnvw_option=$cnvw_option,cao_check=${cao_check},
   netcdf_diag=$netcdf_diag,binary_diag=$binary_diag,
   lobsdiag_forenkf=$lobsdiag_forenkf,
   write_fv3_incr=$write_fv3_increment,
   nhr_anal=${IAUFHRS},
+  ta2tb=${ta2tb},
   $WRITE_INCR_ZERO
   $WRITE_ZERO_STRAT
   $WRITE_STRAT_EFOLD
@@ -805,7 +812,7 @@ cat > gsiparm.anl << EOF
   $OBSQC
 /
 &OBS_INPUT
-  dmesh(1)=145.0,dmesh(2)=150.0,dmesh(3)=100.0,time_window_max=3.0,
+  dmesh(1)=145.0,dmesh(2)=150.0,dmesh(3)=100.0,dmesh(4)=25.0,time_window_max=3.0,
   $OBSINPUT
 /
 OBS_INPUT::
@@ -896,22 +903,36 @@ OBS_INPUT::
    gsnd1bufr      sndrd4      g15         sndrD4_g15          0.0     1     0
    oscatbufr      uv          null        uv                  0.0     0     0
    mlsbufr        mls30       aura        mls30_aura          0.0     0     0
-   avhambufr      avhrr       metop-a     avhrr3_metop-a      0.0     1     0
-   avhpmbufr      avhrr       n18         avhrr3_n18          0.0     1     0
-   avhambufr      avhrr       metop-b     avhrr3_metop-b      0.0     1     0
-   avhpmbufr      avhrr       n19         avhrr3_n19          0.0     1     0
+   avhambufr      avhrr       metop-a     avhrr3_metop-a      0.0     4     0
+   avhpmbufr      avhrr       n18         avhrr3_n18          0.0     4     0
+   avhambufr      avhrr       metop-b     avhrr3_metop-b      0.0     4     0
+   avhambufr      avhrr       metop-c     avhrr3_metop-c      0.0     4     0
+   avhpmbufr      avhrr       n19         avhrr3_n19          0.0     4     0
    amsr2bufr      amsr2       gcom-w1     amsr2_gcom-w1       0.0     3     0
-   gmibufr        gmi         gpm         gmi_gpm             0.0     3     0
+   gmibufr        gmi         gpm         gmi_gpm             0.0     1     0
    saphirbufr     saphir      meghat      saphir_meghat       0.0     3     0
    ahibufr        ahi         himawari8   ahi_himawari8       0.0     1     0
    abibufr        abi         g16         abi_g16             0.0     1     0
    abibufr        abi         g17         abi_g17             0.0     1     0
    rapidscatbufr  uv          null        uv                  0.0     0     0
    ompsnpbufr     ompsnp      npp         ompsnp_npp          0.0     0     0
+   ompslpbufr     ompslp      npp         ompslp_npp          0.0     0     0
    ompstcbufr     ompstc8     npp         ompstc8_npp         0.0     2     0
+   ompsnpbufr     ompsnp      n20         ompsnp_n20          0.0     0     0
+   ompstcbufr     ompstc8     n20         ompstc8_n20         0.0     2     0
    amsuabufr      amsua       metop-c     amsua_metop-c       0.0     1     1
    mhsbufr        mhs         metop-c     mhs_metop-c         0.0     1     1
    iasibufr       iasi        metop-c     iasi_metop-c        0.0     1     1
+   sstviirs       viirs-m     npp         viirs-m_npp         0.0     4     0
+   sstviirs       viirs-m     j1          viirs-m_j1          0.0     4     0
+   abibufr        abi         g18         abi_g18             0.0     1     0
+   ahibufr        ahi         himawari9   ahi_himawari9       0.0     1     0
+   atmsbufr       atms        n21         atms_n21            0.0     1     1
+   crisfsbufr     cris-fsr    n21         cris-fsr_n21        0.0     1     0
+   sstviirs       viirs-m     j2          viirs-m_j2          0.0     4     0
+   ompsnpbufr     ompsnp      n21         ompsnp_n21          0.0     0     0
+   ompstcbufr     ompstc8     n21         ompstc8_n21         0.0     2     0
+   gomebufr       gome        metop-c     gome_metop-c        0.0     2     0
 ::
 &SUPEROB_RADAR
   $SUPERRAD
@@ -958,11 +979,7 @@ export pgm=$GSIEXEC
 
 $NCP $GSIEXEC $DATA
 $APRUN_GSI ${DATA}/$(basename $GSIEXEC) 1>&1 2>&2
-rc=$?
-
-export ERR=$rc
-export err=$ERR
-$ERRSCRIPT || exit 4
+export err=$?; err_chk
 
 
 ##############################################################
@@ -970,11 +987,7 @@ $ERRSCRIPT || exit 4
 # here before releasing FV3 forecast
 if [ $DO_CALC_INCREMENT = "YES" ]; then
   $CALCINCPY
-  rc=$?
-
-  export ERR=$rc
-  export err=$ERR
-  $ERRSCRIPT || exit 5
+  export err=$?; err_chk
 fi
 
 ##############################################################
@@ -985,11 +998,11 @@ if [ $DOGCYCLE = "YES" ]; then
 
     # Global cycle requires these files
     export FNTSFA=${FNTSFA:-$COMIN_OBS/${OPREFIX}rtgssthr.grb}
-    export FNACNA=${FNACNA:-$COMIN_OBS/${OPREFIX}seaice.5min.blend.grb}
-    export FNSNOA=${FNSNOA:-$COMIN_OBS/${OPREFIX}snogrb_t${JCAP_CASE}.${LONB_CASE}.${LATB_CASE}}
-    [[ ! -f $FNSNOA ]] && export FNSNOA="$COMIN_OBS/${OPREFIX}snogrb_t1534.3072.1536"
-    FNSNOG=${FNSNOG:-$COMIN_GES_OBS/${GPREFIX}snogrb_t${JCAP_CASE}.${LONB_CASE}.${LATB_CASE}}
-    [[ ! -f $FNSNOG ]] && FNSNOG="$COMIN_GES_OBS/${GPREFIX}snogrb_t1534.3072.1536"
+    export FNACNA=${FNACNA:-$COMIN/${OPREFIX}seaice.5min.blend.grb}
+    export FNSNOA=${FNSNOA:-$COMIN/${OPREFIX}snogrb_t${JCAP_CASE}.${LONB_CASE}.${LATB_CASE}}
+    [[ ! -f $FNSNOA ]] && export FNSNOA="$COMIN/${OPREFIX}snogrb_t1534.3072.1536"
+    FNSNOG=${FNSNOG:-$COMIN_GES/${GPREFIX}snogrb_t${JCAP_CASE}.${LONB_CASE}.${LATB_CASE}}
+    [[ ! -f $FNSNOG ]] && FNSNOG="$COMIN_GES/${GPREFIX}snogrb_t1534.3072.1536"
 
     # Set CYCLVARS by checking grib date of current snogrb vs that of prev cycle
     if [ $RUN_GETGES = "YES" ]; then
@@ -1008,11 +1021,9 @@ if [ $DOGCYCLE = "YES" ]; then
     fi
 
     if [ $DONST = "YES" ]; then
-        export NST_ANL=".true."
-        export GSI_FILE=${GSI_FILE:-$COMOUT/${APREFIX}dtfanl.nc}
+        export NST_FILE=${NST_FILE:-$COMOUT/${APREFIX}dtfanl.nc}
     else
-        export NST_ANL=".false."
-        export GSI_FILE="NULL"
+        export NST_FILE="NULL"
     fi
 
     if [ $DOIAU = "YES" ]; then
@@ -1030,10 +1041,7 @@ if [ $DOGCYCLE = "YES" ]; then
         export MAX_TASKS_CY=$ntiles
 
         $CYCLESH
-        rc=$?
-        export ERR=$rc
-        export err=$ERR
-        $ERRSCRIPT || exit 11
+        export err=$?; err_chk
     fi
     # update surface restarts at middle of window
     for n in $(seq 1 $ntiles); do
@@ -1048,11 +1056,7 @@ if [ $DOGCYCLE = "YES" ]; then
     export MAX_TASKS_CY=$ntiles
 
     $CYCLESH
-    rc=$?
-    export ERR=$rc
-    export err=$ERR
-    $ERRSCRIPT || exit 11
-
+    export err=$?; err_chk
 fi
 
 
@@ -1072,6 +1076,7 @@ if [ $RUN_SELECT = "YES" ]; then
   echo $(date) START tar obs_input >&2
   [[ -s obsinput.tar ]] && rm obsinput.tar
   $NLN $SELECT_OBS obsinput.tar
+  ${CHGRP_CMD} obs_input.*
   tar -cvf obsinput.tar obs_input.*
   chmod 750 $SELECT_OBS
   ${CHGRP_CMD} $SELECT_OBS

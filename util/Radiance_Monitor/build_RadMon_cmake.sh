@@ -15,22 +15,28 @@
 set -ax
 
 mode=${1:-}
+MY_RADMON=${2:-}
+
 top_level=${PWD}
 echo "top_level = ${top_level}"
 
-if [[ -d /dcom && -d /hwrf ]] ; then
-    . /usrx/local/Modules/3.2.10/init/sh
-    target=wcoss
+export MY_RADMON=${MY_RADMON:-$top_level}
+echo "MY_RADMON = ${MY_RADMON}"
+
+target=`./get_machine.sh`
+echo "target = $target"
+
+if [[ $target = "wcoss_c" || $target = "wcoss_d" ||
+      $target = "orion"   || $target = "wcoss2"  || 
+      $target = "s4" ]] ; then
     . $MODULESHOME/init/sh
-elif [[ -d /cm ]] ; then
-    . $MODULESHOME/init/sh
-    target=wcoss_c
-elif [[ -d /ioddev_dell ]]; then
-    . $MODULESHOME/init/sh
-    target=wcoss_d
-elif [[ -d /scratch1 ]] ; then
+elif [[ $target = "hera" ]] ; then
     . /apps/lmod/lmod/init/sh
-    target=hera
+elif [[ $target = "jet" ]] ; then
+    . /apps/lmod/lmod/init/sh
+elif [[ -d /lfs && -d /dfs ]]; then
+    . $MODULESHOME/init/bash
+    target=wcoss2
 else
     echo "unknown target = $target"
     exit 9
@@ -59,7 +65,9 @@ fi
 #---------------------------------------------------           
 
 if [[ ${target} = "hera"     || ${target} = "wcoss" \
-   || ${target} = "wcoss_c"  || ${target} = "wcoss_d" ]]; then
+   || ${target} = "wcoss_c"  || ${target} = "wcoss_d" \
+   || ${target} = "orion"    || ${target} = "jet" \
+   || ${target} = "s4"       || ${target} = "wcoss2" ]]; then
    echo Building nwprod executables on ${target}
    echo
 
@@ -67,19 +75,27 @@ if [[ ${target} = "hera"     || ${target} = "wcoss" \
    #-------------------------------------
    #  load modules 
    #-------------------------------------
-   if [ $target = wcoss_d ]; then
+   if [ $target = wcoss_d -o $target = "wcoss2" ]; then
       module purge
       module use -a $dir_modules
       module load modulefile.ProdGSI.$target
    elif [ $target = wcoss -o $target = gaea ]; then
       module purge
       module load $dir_modules/modulefile.ProdGSI.$target
-   elif [ $target = hera -o $target = cheyenne ]; then
+   elif [ $target = hera -o $target = orion -o $target = jet -o $target = s4 ]; then
+    module purge
+    module use $dir_modules
+    module load modulefile.ProdGSI.$target
+   elif [ $target = cheyenne ]; then
       module purge
       source $dir_modules/modulefile.ProdGSI.$target
    elif [ $target = wcoss_c ]; then
       module purge
       module load $dir_modules/modulefile.ProdGSI.$target
+   elif [ $target = wcoss2 ]; then
+      module purge
+      module use -a $dir_modules
+      module load modulefile.ProdGSI.$target.lua 
    fi
 
 

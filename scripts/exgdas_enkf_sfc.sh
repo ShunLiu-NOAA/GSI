@@ -1,4 +1,4 @@
-#!/bin/ksh
+#!/bin/bash
 ################################################################################
 ####  UNIX Script Documentation Block
 #                      .                                             .
@@ -35,7 +35,6 @@ export CASE=${CASE:-384}
 ntiles=${ntiles:-6}
 
 # Utilities
-ERRSCRIPT=${ERRSCRIPT:-'eval [[ $err = 0 ]]'}
 NCP=${NCP:-"/bin/cp -p"}
 NLN=${NLN:-"/bin/ln -sf"}
 NEMSIOGET=${NEMSIOGET:-${NWPROD}/exec/nemsio_get}
@@ -106,11 +105,11 @@ LONB_CASE=$((res*4))
 
 # Global cycle requires these files
 export FNTSFA=${FNTSFA:-'                  '}
-export FNACNA=${FNACNA:-$COMIN_OBS/${OPREFIX}seaice.5min.blend.grb}
-export FNSNOA=${FNSNOA:-$COMIN_OBS/${OPREFIX}snogrb_t${JCAP_CASE}.${LONB_CASE}.${LATB_CASE}}
-[[ ! -f $FNSNOA ]] && export FNSNOA="$COMIN_OBS/${OPREFIX}snogrb_t1534.3072.1536"
-FNSNOG=${FNSNOG:-$COMIN_GES_OBS/${GPREFIX}snogrb_t${JCAP_CASE}.${LONB_CASE}.${LATB_CASE}}
-[[ ! -f $FNSNOG ]] && FNSNOG="$COMIN_GES_OBS/${GPREFIX}snogrb_t1534.3072.1536"
+export FNACNA=${FNACNA:-$COMIN/${OPREFIX}seaice.5min.blend.grb}
+export FNSNOA=${FNSNOA:-$COMIN/${OPREFIX}snogrb_t${JCAP_CASE}.${LONB_CASE}.${LATB_CASE}}
+[[ ! -f $FNSNOA ]] && export FNSNOA="$COMIN/${OPREFIX}snogrb_t1534.3072.1536"
+FNSNOG=${FNSNOG:-$COMIN_GES/${GPREFIX}snogrb_t${JCAP_CASE}.${LONB_CASE}.${LATB_CASE}}
+[[ ! -f $FNSNOG ]] && FNSNOG="$COMIN_GES/${GPREFIX}snogrb_t1534.3072.1536"
 
 # Set CYCLVARS by checking grib date of current snogrb vs that of prev cycle
 if [ ${RUN_GETGES:-"NO"} = "YES" ]; then
@@ -129,11 +128,9 @@ else
 fi
 
 if [ $DONST = "YES" ]; then
-    export NST_ANL=".true."
-    export GSI_FILE=${GSI_FILE:-$COMIN/${APREFIX}dtfanl.nc}
+    export NST_FILE=${NST_FILE:-$COMIN/${APREFIX}dtfanl.nc}
 else
-    export NST_ANL=".false."
-    export GSI_FILE="NULL"
+    export NST_FILE="NULL"
 fi
 
 export APRUNCY=${APRUN_CYCLE:-$APRUN_ESFC}
@@ -163,10 +160,7 @@ if [ $DOIAU = "YES" ]; then
         done
 
         $CYCLESH
-        rc=$?
-        export ERR=$rc
-        export err=$ERR
-        $ERRSCRIPT || exit 11
+        export err=$?; err_chk
 
     done
 
@@ -192,10 +186,7 @@ if [ $DOSFCANL_ENKF = "YES" ]; then
     done
 
     $CYCLESH
-    rc=$?
-    export ERR=$rc
-    export err=$ERR
-    $ERRSCRIPT || exit 11
+    export err=$?; err_chk
 
  done
 fi

@@ -1,4 +1,4 @@
-#!/bin/ksh
+#!/bin/bash
 ################################################################################
 ####  UNIX Script Documentation Block
 #                      .                                             .
@@ -30,7 +30,6 @@ pwd=$(pwd)
 # Utilities
 NCP=${NCP:-"/bin/cp -p"}
 NLN=${NLN:-"/bin/ln -sf"}
-ERRSCRIPT=${ERRSCRIPT:-'eval [[ $err = 0 ]]'}
 NEMSIOGET=${NEMSIOGET:-$NWPROD/utils/exec/nemsio_get}
 NCLEN=${NCLEN:-$HOMEgfs/ush/getncdimlen}
 USE_CFP=${USE_CFP:-"NO"}
@@ -245,9 +244,7 @@ if [ $USE_CFP = "YES" ]; then
       ncmd_max=$((ncmd < npe_node_max ? ncmd : npe_node_max))
       APRUNCFP=$(eval echo $APRUNCFP)
       $APRUNCFP $DATA/mp_untar.sh
-      export ERR=$?
-      export err=$ERR
-      $ERRSCRIPT || exit 3
+      export err=$?; err_chk
    fi
 fi
 
@@ -352,6 +349,15 @@ cat > enkf.nml << EOFnml
    sattypes_rad(68)= 'ahi_himawari8', dsis(68)= 'ahi_himawari8',
    sattypes_rad(69)= 'abi_g16',       dsis(69)= 'abi_g16',
    sattypes_rad(70)= 'abi_g17',       dsis(70)= 'abi_g17',
+   sattypes_rad(71)= 'iasi_metop-c',  dsis(71)= 'iasi_metop-c',
+   sattypes_rad(72)= 'viirs-m_npp',   dsis(72)= 'viirs-m_npp',
+   sattypes_rad(73)= 'viirs-m_j1',    dsis(73)= 'viirs-m_j1',
+   sattypes_rad(74)= 'avhrr_metop-c', dsis(74)= 'avhrr3_metop-c',
+   sattypes_rad(75)= 'abi_g18',       dsis(75)= 'abi_g18',
+   sattypes_rad(76)= 'ahi_himawari9', dsis(76)= 'ahi_himawari9',
+   sattypes_rad(77)= 'viirs-m_j2',    dsis(77)= 'viirs-m_j2',
+   sattypes_rad(78)= 'atms_n21',      dsis(78)= 'atms_n21',
+   sattypes_rad(79)= 'cris-fsr_n21',  dsis(79)= 'cris-fsr_n21',
    $SATOBS_ENKF
 /
 &ozobs_enkf
@@ -365,6 +371,12 @@ cat > enkf.nml << EOFnml
    sattypes_oz(8) = 'mls30_aura',
    sattypes_oz(9) = 'ompsnp_npp',
    sattypes_oz(10) = 'ompstc8_npp',
+   sattypes_oz(11) = 'ompstc8_n20',
+   sattypes_oz(12) = 'ompsnp_n20',
+   sattypes_oz(13) = 'ompslp_npp',
+   sattypes_oz(14) = 'ompstc8_n21',
+   sattypes_oz(15) = 'ompsnp_n21',
+   sattypes_oz(16) = 'gome_metop-c',
    $OZOBS_ENKF
 /
 EOFnml
@@ -378,11 +390,7 @@ export pgm=$ENKFEXEC
 
 $NCP $ENKFEXEC $DATA
 $APRUN_ENKF ${DATA}/$(basename $ENKFEXEC) 1>stdout 2>stderr
-rc=$?
-
-export ERR=$rc
-export err=$ERR
-$ERRSCRIPT || exit 2
+export err=$?; err_chk
 
 # Cat runtime output files.
 cat stdout stderr > $COMOUT_ANL_ENS/$ENKFSTAT

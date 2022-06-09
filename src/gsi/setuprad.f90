@@ -215,6 +215,7 @@ contains
 !   2019-03-13  eliu    - add calculation of scattering index for MHS/ATMS 
 !   2019-03-27  h. liu  - add ABI assimilation
 !   2019-08-20  zhu     - add flexibility to allow radiances being assimilated without bias correction
+!   2021-02-20  x.li    - add viirs
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -279,7 +280,7 @@ contains
   use sst_retrieval, only: setup_sst_retrieval,avhrr_sst_retrieval,&
       finish_sst_retrieval,spline_cub
   use m_dtime, only: dtime_setup, dtime_check
-  use crtm_interface, only: init_crtm,call_crtm,destroy_crtm,sensorindex,surface, &
+  use crtm_interface, only: init_crtm,call_crtm,destroy_crtm,sensorindex,surface,&
       itime,ilon,ilat,ilzen_ang,ilazi_ang,iscan_ang,iscan_pos,iszen_ang,isazi_ang, &
       ifrac_sea,ifrac_lnd,ifrac_ice,ifrac_sno,itsavg, &
       izz,idomsfc,isfcr,iff10,ilone,ilate, &
@@ -356,12 +357,14 @@ contains
   real(r_kind) bias       
   real(r_kind) factch6    
   real(r_kind) stability,tcwv,hwp_ratio         
-  real(r_kind) si_obs,si_fg,si_mean                     
-  
+  real(r_kind) si_obs,si_fg                
+! real(r_kind) si_mean                     
+  real(r_kind) total_cloud_cover
+
   logical cao_flag                       
   logical hirs2,msu,goessndr,hirs3,hirs4,hirs,amsua,amsub,airs,hsb,goes_img,ahi,mhs,abi
   type(sparr2) :: dhx_dx
-  logical avhrr,avhrr_navy,lextra,ssu,iasi,cris,seviri,atms
+  logical avhrr,avhrr_navy,viirs,lextra,ssu,iasi,cris,seviri,atms
   logical ssmi,ssmis,amsre,amsre_low,amsre_mid,amsre_hig,amsr2,gmi,saphir
   logical ssmis_las,ssmis_uas,ssmis_env,ssmis_img
   logical sea,mixed,land,ice,snow,toss,l_may_be_passive,eff_area
@@ -497,6 +500,7 @@ contains
   goes_img   = obstype == 'goes_img'
   ahi        = obstype == 'ahi'
   avhrr      = obstype == 'avhrr'
+  viirs      = obstype == 'viirs-m'
   avhrr_navy = obstype == 'avhrr_navy'
   ssmi       = obstype == 'ssmi'
   amsre_low  = obstype == 'amsre_low'
@@ -887,6 +891,7 @@ contains
 !       Output both tsim and tsim_clr for allsky
         tsim_clr=zero
         tcc=zero
+        total_cloud_cover=zero
         if (radmod%lcloud_fwd) then
           call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &
              tvp,qvp,clw_guess,ciw_guess,rain_guess,snow_guess,prsltmp,prsitmp, &
@@ -903,7 +908,8 @@ contains
                 tvp,qvp,clw_guess,ciw_guess,rain_guess,snow_guess,prsltmp,prsitmp, &
                  trop5,tzbgr,dtsavg,sfc_speed, &
                  tsim2,emissivity2,ptau52,ts2,emissivity_k2, &
-                 temp2,wmix2,jacobian2,error_status,tsim_clr2)
+                 temp2,wmix2,jacobian2,error_status,tsim_clr=tsim_clr2,tcc=tcc,&
+                 tcwv=tcwv,hwp_ratio=hwp_ratio,stability=stability)
              ! merge 
              emissivity(10:13)  = emissivity2(10:13)
              ts(10:13)          = ts2(10:13)
@@ -919,6 +925,8 @@ contains
              tsim_clr(10:13)    = tsim_clr2(10:13)
              cosza2 = cos(data_s(ilzen_ang2,n))
           endif
+          total_cloud_cover = tcc(1)
+          cld = total_cloud_cover
         else
           call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &
              tvp,qvp,clw_guess,ciw_guess,rain_guess,snow_guess,prsltmp,prsitmp, &
@@ -1045,7 +1053,7 @@ contains
            endif
         endif
         ! Screening for cold-air outbreak area (only applied to MW for now)
-        if (cao_check) then   
+        if (cao_check .and. radmod%lprecip) then   
            if(microwave .and. sea) then 
               if(radmod%lcloud_fwd) then                            
                  cao_flag = (stability < 12.0_r_kind) .and. (hwp_ratio  < half) .and.  (tcwv < 8.0_r_kind) 
@@ -1157,9 +1165,12 @@ contains
               end if
            end if
 
-           do j=1, npred-angord                              
+!          Zero out air mass terms if required
+           do j=2, npred-angord                              
               pred(j,i)=pred(j,i)*air_rad(mm)
            end do
+
+!          Zero out angle terms if required
            if (adp_anglebc) then
               do j=npred-angord+1, npred                                         
                  pred(j,i)=pred(j,i)*ang_rad(mm)
@@ -1366,7 +1377,7 @@ contains
            end if
 
            call qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse(n),   &
-              zsges,cenlat,tb_obsbc1,si_mean,cosza,clw_obs,tbc,ptau5,emissivity_k,ts, &                   
+              zsges,cenlat,tb_obsbc1,cosza,clw_obs,tbc,ptau5,emissivity_k,ts, &                   
               pred,predchan,id_qc,aivals,errf,errf0,clw_obs,varinv,cldeff_obs,cldeff_fg,factch6, & 
               cld_rbc_idx,sfc_speed,error0,clw_guess_retrieval,scatp,radmod)                    
 
@@ -1404,10 +1415,10 @@ contains
            end if
            si_obs = (tb_obsbc16-tb_obsbc17) - (tsim_clr(16)-tsim_clr(17)) 
            si_fg  = (tsim(16)-tsim(17)) - (tsim_clr(16)-tsim_clr(17)) 
-           si_mean= half*(si_obs+si_fg) 
+!          si_mean= half*(si_obs+si_fg) 
 
            call qc_atms(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse(n),    &
-              zsges,cenlat,tb_obsbc1,si_mean,cosza,clw_obs,tbc,ptau5,emissivity_k,ts, & 
+              zsges,cenlat,tb_obsbc1,cosza,clw_obs,tbc,ptau5,emissivity_k,ts, & 
               pred,predchan,id_qc,aivals,errf,errf0,clw_obs,varinv,cldeff_obs,cldeff_fg,factch6, &
               cld_rbc_idx,sfc_speed,error0,clw_guess_retrieval,scatp,radmod)                   
 
@@ -1510,6 +1521,28 @@ contains
               wavenumber,ptau5,prsltmp,tvp,temp,wmix,emissivity_k,ts, &
               id_qc,aivals,errf,varinv,varinv_use,cld,cldp)
 
+        else if (viirs) then
+
+           frac_sea=data_s(ifrac_sea,n)
+
+!  NOTE:  use qc_avhrr for viirs qc
+           do i=1,nchanl
+              m=ich(i)
+              if (varinv(i) < tiny_r_kind) then
+                 varinv_use(i) = zero
+              else
+                 if ((icld_det(m)>0)) then
+                    varinv_use(i) = varinv(i)
+                 else
+                    varinv_use(i) = zero
+                 end if
+              end if
+           end do
+
+           call qc_avhrr(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse(n),   &
+              zsges,cenlat,frac_sea,pangs,trop5,tzbgr,tsavg5,tbc,tb_obs,tnoise, &
+              wavenumber,ptau5,prsltmp,tvp,temp,wmix,emissivity_k,ts, &
+              id_qc,aivals,errf,varinv,varinv_use,cld,cldp)
 
 !  ---------- SSM/I , SSMIS, AMSRE  -------------------
 !       SSM/I, SSMIS, & AMSRE Q C
@@ -1582,9 +1615,17 @@ contains
               m=ich(i)
               if(radmod%lcloud_fwd .and. eff_area) then
                  if(radmod%rtype == 'amsua' .and. (i <=5 .or. i==15) ) then 
-                    errf(i) = three*errf(i)    
+                    if (radmod%lprecip) then
+                       errf(i) = 2.5_r_kind*errf(i)
+                    else
+                       errf(i) = three*errf(i)
+                    endif
                  else if(radmod%rtype == 'atms' .and. (i <= 6 .or. i>=16) ) then
-                    errf(i) = min(three*errf(i),10.0_r_kind)    
+                    if (radmod%lprecip) then
+                       errf(i) = min(2.5_r_kind*errf(i),10.0_r_kind)
+                    else
+                       errf(i) = min(three*errf(i),10.0_r_kind)
+                    endif
                  else if(radmod%rtype == 'gmi') then
                     errf(i) = min(2.0_r_kind*errf(i),ermax_rad(m))
                  else if (radmod%rtype/='amsua' .and. radmod%rtype/='atms' .and. radmod%rtype/='gmi' .and. radmod%lcloud4crtm(i)>=0) then
@@ -2108,7 +2149,7 @@ contains
   deallocate(diagbufchan)
   deallocate(sc_index)
 
-  if (rad_diagsave) then
+  if (rad_diagsave .and. nchanl_diag > 0) then
      if (netcdf_diag) call nc_diag_write
      if(binary_diag) call final_binary_diag_
      if (lextra .and. allocated(diagbufex)) deallocate(diagbufex)
