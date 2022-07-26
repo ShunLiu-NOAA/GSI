@@ -22,6 +22,8 @@ module read_l2bufr_mod
 !   2011-07-04  todling  - fixes to run either single or double precision
 !   2020-10-23  S.Liu    - fix reading l2rw_bufr issue
 !   2020-10-14  xu/sippel - Add options to superob the GRO
+!   2021-12-08  s.liu    - change max_num_radars from 150 to 250
+!   2021-12-10  s.liu    - fixes to find the index of radar station
 !
 ! subroutines included:
 !   sub initialize_superob_radar - initialize superob parameters to defaults
@@ -147,7 +149,7 @@ contains
 
     integer(i_kind),intent(in):: npe,mype
 
-    integer(i_kind),parameter:: max_num_radars=150
+    integer(i_kind),parameter:: max_num_radars=250
     integer(i_kind),parameter:: maxobs=2e8 
     integer(i_kind),parameter:: n_gates_max=4000
     real(r_kind),parameter:: four_thirds = 4.0_r_kind / 3.0_r_kind
@@ -247,6 +249,8 @@ contains
     character(len=256),allocatable,dimension(:):: rtable 
     character(4),allocatable,dimension(:):: rsite 
     integer(i_kind),allocatable,dimension(:):: ruse 
+
+    write(6,*)'sliu test'
  
     print_verbose=.false.
     if(verbose) print_verbose=.true.
@@ -371,7 +375,8 @@ contains
              end do 
              if (radar_true == 0) cycle 
           end if 
-          ibyte=index(cstn_id_table,stn_id)
+          !ibyte=index(cstn_id_table,stn_id)
+          ibyte=locindex(stn_id_table,max_num_radars,stn_id)
           if(ibyte==0) then
              num_radars=num_radars+1
              if(num_radars>max_num_radars) then
@@ -548,7 +553,8 @@ contains
 	     cycle
 	  end if
 	  stn_id=chdr 
-	  ibyte=index(cmaster_stn_table,stn_id)
+!  ibyte=index(cmaster_stn_table,stn_id)
+	  ibyte=locindex(master_stn_table,max_num_radars,stn_id)
           if (radar_sites) then 
              radar_true=0 
              do i=1,radar_count 
@@ -562,7 +568,8 @@ contains
 	     write(6,*) ' index error in radar_bufr_read_all -- program stops -- ',ibyte,stn_id
 	     call stop2(99)
 	  else
-	     krad=1+(ibyte-1)/4
+	     !krad=1+(ibyte-1)/4
+	     krad=ibyte
 	  end if
 
 	  call ufbint(inbufr,rwnd,3,n_gates_max,n_gates,'DIST125M DMVR DVSW')
@@ -1054,4 +1061,16 @@ SUBROUTINE invtllv(ALM,APH,TLMO,CTPH0,STPH0,TLM,TPH)
   TPH=ASIN(CTPH0*SPH+STPH0*CC)
   return
 END SUBROUTINE invtllv
+FUNCTION locindex(stnall,nstr,stn)
+  character(4)::stnall(nstr)
+  character(4)::stn
+  integer:: i,locindex,nstr
+  do i=1,nstr
+     locindex=index(stnall(i),stn)
+     if(locindex>0) then
+      locindex=i
+      exit
+     end if
+  end do
+END FUNCTION locindex
 end module read_l2bufr_mod
