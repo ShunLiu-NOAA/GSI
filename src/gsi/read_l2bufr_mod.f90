@@ -250,8 +250,6 @@ contains
     character(4),allocatable,dimension(:):: rsite 
     integer(i_kind),allocatable,dimension(:):: ruse 
 
-    write(6,*)'sliu test'
- 
     print_verbose=.false.
     if(verbose) print_verbose=.true.
     if (radar_sites) then 
@@ -375,7 +373,6 @@ contains
              end do 
              if (radar_true == 0) cycle 
           end if 
-          !ibyte=index(cstn_id_table,stn_id)
           ibyte=locindex(stn_id_table,max_num_radars,stn_id)
           if(ibyte==0) then
              num_radars=num_radars+1
@@ -553,7 +550,6 @@ contains
 	     cycle
 	  end if
 	  stn_id=chdr 
-!  ibyte=index(cmaster_stn_table,stn_id)
 	  ibyte=locindex(master_stn_table,max_num_radars,stn_id)
           if (radar_sites) then 
              radar_true=0 
@@ -568,7 +564,6 @@ contains
 	     write(6,*) ' index error in radar_bufr_read_all -- program stops -- ',ibyte,stn_id
 	     call stop2(99)
 	  else
-	     !krad=1+(ibyte-1)/4
 	     krad=ibyte
 	  end if
 
