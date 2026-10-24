@@ -171,7 +171,8 @@ case $machine in
   ;;
   Ursa)
 
-    export local_or_default="${local_or_default:-/scratch3/NCEPDEV/da/$LOGNAME}"
+    #export local_or_default="${local_or_default:-/scratch3/NCEPDEV/da/$LOGNAME}"
+    export local_or_default="${local_or_default:-/scratch4/NCEPDEV/fv3-cam/$LOGNAME}"
     if [ -d $local_or_default ]; then
       export noscrub="$local_or_default/noscrub"
     elif [ -d /scratch3/NCEPDEV/global/$LOGNAME ]; then
@@ -180,7 +181,8 @@ case $machine in
       export noscrub="/scratch4/BMC/gsienkf/$LOGNAME"
     fi
 
-    export group="${group:-global}"
+    #export group="${group:-global}"
+    export group="${group:-fv3-cam}"
     export queue="${queue:-batch}"
     if [[ "$cmaketest" = "false" ]]; then
       export basedir="/scratch3/NCEPDEV/da/$LOGNAME/git/gsi"

@@ -99,6 +99,42 @@ case $regtest in
 
     ;;
 
+    global_3dvar)
+
+        if [[ "$machine" = "Hera" ]]; then
+           topts[1]="0:15:00" ; popts[1]="12/8/" ; ropts[1]="/1"
+           topts[2]="0:15:00" ; popts[2]="12/10/" ; ropts[2]="/2"
+        elif [[ "$machine" = "Ursa" ]]; then
+           topts[1]="0:10:00" ; popts[1]="48/2/" ; ropts[1]="/1"
+           topts[2]="0:10:00" ; popts[2]="48/3/" ; ropts[2]="/2"
+        elif [[ "$machine" = "Orion" ]]; then
+           topts[1]="0:20:00" ; popts[1]="12/8/" ; ropts[1]="/1"
+           topts[2]="0:20:00" ; popts[2]="12/12/" ; ropts[2]="/2"
+        elif [[ "$machine" = "Hercules" ]]; then
+           topts[1]="0:10:00" ; popts[1]="12/8/" ; ropts[1]="/1"
+           topts[2]="0:10:00" ; popts[2]="12/12/" ; ropts[2]="/2"
+        elif [[ "$machine" = "gaeac6" ]]; then
+           topts[1]="0:10:00" ; popts[1]="12/8/" ; ropts[1]="/1"
+           topts[2]="0:10:00" ; popts[2]="12/10/" ; ropts[2]="/2"
+        elif [[ "$machine" = "wcoss2" || "$machine" = "acorn" ]]; then
+           topts[1]="0:10:00" ; popts[1]="12/8/" ; ropts[1]="/1"
+           topts[2]="0:10:00" ; popts[2]="12/10/" ; ropts[2]="/2"
+        elif [[ "$machine" = "nimbus" ]]; then
+           topts[1]="0:10:00" ; popts[1]="12/8/" ; ropts[1]="/1"
+           topts[2]="0:10:00" ; popts[2]="12/10/" ; ropts[2]="/2"
+        elif [[ "$machine" = "noaacloud" ]]; then
+           topts[1]="0:10:00" ; popts[1]="48/2/" ; ropts[1]="/1"
+           topts[2]="0:10:00" ; popts[2]="24/5/" ; ropts[2]="/2"
+        fi
+
+        if [ "$debug" = ".true." ] ; then
+           topts[1]="1:30:00"
+        fi
+
+        scaling[1]=10; scaling[2]=8; scaling[3]=4
+
+    ;;
+
     rrfs_3denvar_rdasens)
 
         if [[ "$machine" = "Hera" ]]; then

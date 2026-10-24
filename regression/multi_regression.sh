@@ -1,6 +1,7 @@
 #!/bin/sh --login
 
 regtests_all="global_4denvar
+global_3dvar
               rrfs_3denvar_rdasens
               hafs_4denvar_glbens
               hafs_3denvar_hybens
@@ -10,6 +11,7 @@ regtests_all="global_4denvar
 #              rrfs_enkf_conv   : comment out RRFS enkf case for now
 #                                 need to update EnKF code
 regtests_debug="global_4denvar
+global_3dvar
                 rrfs_3denvar_rdasens
                 hafs_4denvar_glbens
                 hafs_3denvar_hybens
